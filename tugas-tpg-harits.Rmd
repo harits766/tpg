@@ -1,0 +1,236 @@
+```{r}
+library(MASS)
+set.seed(1401231057)  # seed unik sesuai NIM
+
+n1 <- 20   # sampel kelompok 1 (CAT)
+n2 <- 20   # sampel kelompok 2 (Manual)
+
+# mean dari NIM (ambil 57 dan 23)
+mu1 <- c(57, 23)
+mu2 <- c(60, 25)  # beda sedikit dari mu1
+
+# matriks kovarians dari kombinasi angka NIM
+Sigma <- matrix(c(100,40,
+                  40,80), nrow=2, byrow=TRUE)
+
+# generate data
+data1 <- mvrnorm(n1, mu=mu1, Sigma=Sigma)  # kelompok CAT
+data2 <- mvrnorm(n2, mu=mu2, Sigma=Sigma)  # kelompok Manual
+
+# gabungkan
+data_cpns <- data.frame(
+  Metode = rep(c("CAT","Manual"), each=n1),
+  Var1 = c(data1[,1], data2[,1]),
+  Var2 = c(data1[,2], data2[,2])
+)
+head(data_cpns)
+```
+```{r}
+library(MVTests)
+
+X <- data1 - data2   # selisih berpasangan
+result_paired <- OneSampleHT2(X, mu0=c(0,0), alpha=0.05)
+summary(result_paired)
+result_paired$CI
+```
+#Secara multivariat, kedua variabel bersama-sama tidak berbeda signifikan dari nol (Hotelling T² = 0.184, F = 0.087, p = 0.917). Artinya, tidak ada bukti yang cukup untuk menyatakan bahwa metode CAT dan Manual menghasilkan rata-rata yang berbeda secara simultan.
+
+#Selain itu, uji deteksi variabel penting juga tidak menunjukkan ada variabel yang dominan → keduanya konsisten dengan mean nol karena variasi relatif besar dibandingkan perbedaan mean.
+
+#Secara praktis: tidak ada evidence bahwa terdapat pergeseran rata-rata hasil antara kedua metode.
+```{r}
+library(Hotelling)
+
+test_equal <- hotelling.test(data1, data2, var.equal=TRUE)
+test_equal
+
+```
+#Dengan asumsi kovarians sama (equal covariance), diperoleh F = 0.22196, df1 = 2, df2 = 37, p = 0.898. Ini memperkuat hasil sebelumnya bahwa tidak ada perbedaan signifikan rata-rata multivariat antara metode CAT dan Manual.
+```{r}
+test_unequal <- hotelling.test(data1, data2, var.equal=FALSE)
+test_unequal
+```
+#Hasil dengan asumsi kovarians berbeda (unequal covariance) juga menunjukkan hasil yang konsisten → p-value tetap jauh di atas 0.05, sehingga kesimpulannya tetap: tidak ada perbedaan nyata antara kedua metode.
+
+
+
+```{r}
+bon <- function(mu1, mu2 ,S, n1, n2, alpha, k){
+  p = length(mu1)
+  mu = mu1-mu2
+  lower = mu[k] - sqrt((S[k,k]) *(1/n1+1/n2))* abs(qt(alpha/(2*p), df=n1+n2-2))
+  upper = mu[k] + sqrt((S[k,k]) *(1/n1+1/n2))* abs(qt(alpha/(2*p), df=n1+n2-2))
+  ci = c(lower = lower,upper = upper)
+  names(ci)= c("lower","upper")
+  ci
+}
+
+xbar1 <- apply(data1,2,mean)
+xbar2 <- apply(data2,2,mean)
+S1 <- cov(data1); S2 <- cov(data2)
+S_gab <- ((n1-1)*S1+(n2-1)*S2)/(n1+n2-2)
+
+bon(xbar1, xbar2, S_gab, n1, n2,0.05,1)  # Var1
+bon(xbar1, xbar2, S_gab, n1, n2,0.05,2)  # Var2
+```
+#Interpretasi interval kepercayaan Bonferroni: 
+#Var1: CI mencakup nol (misalnya -9.12 s/d 6.78).
+
+#Var2: CI juga mencakup nol (misalnya -7.66 s/d 7.70).
+
+#Ini berarti secara univariat pun tidak ada perbedaan signifikan antara metode CAT dan Manual.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
