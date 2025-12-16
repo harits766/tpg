@@ -1,0 +1,101 @@
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# 1. Kasus dan Data
+
+Kasus: menguji dan memetakan hubungan antara warna rambut (Hair) dan warna mata (Eye) pada 592 mahasiswa statistik.
+
+Data: dataset bawaan R `datasets::HairEyeColor` (3D: Hair × Eye × Sex).  
+Untuk CA, tabel dijumlahkan lintas `Sex` sehingga menjadi tabel kontingensi 2 arah Hair × Eye.
+
+```{r}
+data("HairEyeColor", package = "datasets")
+tab <- apply(HairEyeColor, c(1,2), sum)  # Hair × Eye (agregat lintas Sex)
+tab
+addmargins(tab)
+```
+
+# 2. Uji Chi-square Independensi
+
+Hipotesis:
+
+- H0: Hair dan Eye independen
+- H1: Hair dan Eye tidak independen
+
+```{r}
+uji <- chisq.test(tab)
+uji
+```
+
+Hasil uji: Chi-square = 138.290, df = 9, p-value = 2.2e-16
+Keputusan (α = 0,05): p-value sangat kecil ⇒ tolak H0 (Hair dan Eye tidak independen).
+
+# 3. Analisis Korespondensi (CA)
+
+CA mereduksi tabel kontingensi menjadi beberapa dimensi (maks. `min(I-1, J-1)`), di mana tiap dimensi punya **inersia** (analog “ragam terjelaskan”). Visualisasi umum: biplot baris & kolom pada Dim1–Dim2.
+
+## 3.1 Jalankan CA (FactoMineR)
+
+```{r}
+if (!requireNamespace("FactoMineR", quietly = TRUE)) install.packages("FactoMineR")
+if (!requireNamespace("factoextra", quietly = TRUE)) install.packages("factoextra")
+library(FactoMineR)
+library(factoextra)
+
+res.ca <- CA(tab, graph = FALSE)
+```
+
+## 3.2 Output penting
+
+### Eigenvalue & % inersia
+
+```{r}
+knitr::kable(res.ca$eig, digits = 4, caption = "Eigenvalue dan persentase inersia")
+```
+Tabel eigenvalue & persentase inersia menunjukkan bahwa struktur asosiasi antara kategori Hair dan Eye hampir sepenuhnya dapat dijelaskan oleh Dim 1 (eigenvalue 0,2088; 89,3727%), sementara Dim 2 hanya menambah 9,5149% dan Dim 3 sangat kecil (1,1124%). Artinya, peta 2 dimensi sudah sangat memadai karena kumulatif Dim 1–Dim 2 = 98,8876%, sehingga interpretasi utama hubungan kategori cukup difokuskan pada Dim 1 (pemisahan terbesar) dengan Dim 2 sebagai pola tambahan yang jauh lebih kecil.
+### Koordinat kategori (Dim1–Dim2)
+
+```{r}
+knitr::kable(res.ca$row$coord[,1:2], digits = 4, caption = "Koordinat kategori Hair (baris)")
+knitr::kable(res.ca$col$coord[,1:2], digits = 4, caption = "Koordinat kategori Eye (kolom)")
+```
+Koordinat kategori Hair (baris) menggambarkan posisi tiap jenis rambut pada ruang CA: Blond sangat jauh di sisi negatif Dim 1 (−0,8353) sehingga menjadi pembeda utama terhadap kategori lain, sedangkan Black berada jauh di sisi positif Dim 1 (0,5046) sehingga berlawanan kuat dengan Blond pada dimensi utama. Pada Dim 2, Red paling menonjol di arah positif (0,3196) sementara Black relatif negatif (−0,2148), sehingga Dim 2 terutama memisahkan “Red” versus “Black”; Brown (0,1483; 0,0327) dekat pusat sehingga profilnya lebih mendekati rata-rata dan kontribusi pemisahannya cenderung lebih kecil.
+
+
+Koordinat kategori Eye (kolom) menunjukkan bahwa Dim 1 terutama memisahkan Brown eyes (0,4922; sisi positif) berlawanan dengan Blue eyes (−0,5474; sisi negatif), sehingga kedua kategori mata ini menjadi kontras utama pada dimensi pertama. Pada Dim 2, Green eyes paling tinggi (0,3390) dan Hazel juga positif (0,1674), sedangkan Brown dan Blue sedikit negatif (sekitar −0,08), sehingga Dim 2 menangkap pola tambahan yang terutama menonjolkan “Green/Hazel” relatif terhadap “Brown/Blue”.
+### Kontribusi dan cos2 (Dim1–Dim2)
+
+```{r}
+knitr::kable(res.ca$row$contrib[,1:2], digits = 2, caption = "Kontribusi (%) kategori Hair pada dimensi")
+knitr::kable(res.ca$col$contrib[,1:2], digits = 2, caption = "Kontribusi (%) kategori Eye pada dimensi")
+
+knitr::kable(res.ca$row$cos2[,1:2], digits = 3, caption = "Cos2 kategori Hair (kualitas representasi)")
+knitr::kable(res.ca$col$cos2[,1:2], digits = 3, caption = "Cos2 kategori Eye (kualitas representasi)")
+```
+Kontribusi (%) kategori Hair pada dimensi menjelaskan siapa “penggerak” setiap dimensi: pada Dim 1, kontribusi terbesar datang dari Blond (71,70%) dan Black (22,25%), sehingga pemisahan utama Dim 1 pada dasarnya adalah kontras Blond versus Black (kategori lain minor). Pada Dim 2, dimensi terutama dibentuk oleh Red (55,13%) dan Black (37,88%), artinya variasi tambahan di Dim 2 paling banyak menjelaskan pola yang melibatkan Red dan Black; Brown sangat kecil (2,32% di Dim 2) sehingga kurang menentukan bentuk Dim 2.
+
+Kontribusi (%) kategori Eye pada dimensi memperlihatkan bahwa Dim 1 hampir sepenuhnya ditentukan oleh Blue (52,13%) dan Brown (43,12%), konsisten bahwa dimensi utama adalah kontras Blue–Brown. Untuk Dim 2, pendorong terbesar adalah Green (55,91%) disusul Hazel (19,80%), sedangkan Brown dan Blue masing-masing hanya sekitar 13,04% dan 11,24%, sehingga Dim 2 terutama merepresentasikan variasi tambahan yang menonjolkan Green (dan sebagian Hazel).
+
+Cos2 kategori Hair (kualitas representasi) menunjukkan seberapa “pas” tiap kategori diwakili oleh masing-masing dimensi: Blond sangat baik direpresentasikan oleh Dim 1 (cos2 0,993; Dim 2 hanya 0,007) sehingga interpretasi Blond sebaiknya mengacu pada Dim 1; Black (0,838 di Dim 1) dan Brown (0,864 di Dim 1) juga terutama ditangkap oleh Dim 1. Sebaliknya Red justru lebih kuat direpresentasikan oleh Dim 2 (0,812) dibanding Dim 1 (0,133), jadi makna posisi Red lebih “nyata” jika dibaca lewat Dim 2.
+
+Cos2 kategori Eye (kualitas representasi) menegaskan pola serupa: Brown eyes (0,967 di Dim 1) dan Blue eyes (0,977 di Dim 1) hampir seluruhnya direpresentasikan oleh Dim 1, sehingga interpretasi keduanya paling valid di dimensi utama. Green eyes kebalikannya: lebih baik di Dim 2 (0,773) daripada Dim 1 (0,176), sehingga posisi Green lebih informatif pada dimensi kedua; Hazel moderat pada keduanya (0,542 Dim 1; 0,336 Dim 2), artinya Hazel punya informasi yang relatif terbagi di Dim 1 dan Dim 2.
+
+
+## 3.3 Visualisasi
+
+### Scree plot inersia
+
+```{r}
+fviz_screeplot(res.ca, addlabels = TRUE)
+```
+Scree plot memperlihatkan “titik siku” yang sangat jelas setelah Dim 1: Dim 1 menjelaskan 89,4%, sementara Dim 2 turun tajam ke 9,5% dan Dim 3 hanya 1,1%. Secara praktis ini berarti visualisasi dan interpretasi cukup kuat memakai 2 dimensi, karena tambahan informasi setelah itu sangat kecil; fokus utama tetap pada Dim 1 sebagai struktur dominan, dan Dim 2 sebagai refinement untuk pola minor tertentu (misalnya yang terkait kategori dengan cos2/kontribusi tinggi di Dim 2).
+
+### Biplot CA (Dim1–Dim2)
+
+```{r}
+fviz_ca_biplot(res.ca, repel = TRUE)
+```
+CA biplot merangkum kedekatan asosiasi Hair–Eye: kategori yang berdekatan dan searah dari origin cenderung memiliki profil yang mirip/berasosiasi, sedangkan yang berseberangan menunjukkan kecenderungan berlawanan. Terlihat Blond berada di sisi negatif Dim 1 dan paling dekat arahannya dengan Blue eyes (juga negatif Dim 1), mengindikasikan keterkaitan relatif antara Blond–Blue; sementara Black berada di sisi positif Dim 1 dan cukup dekat dengan Brown eyes (positif Dim 1), mengindikasikan asosiasi Black–Brown. Pada Dim 2, Red hair (positif Dim 2) cenderung lebih dekat ke Hazel/Green eyes yang juga positif Dim 2, namun karena Dim 2 kontribusinya jauh lebih kecil dari Dim 1, temuan utama tetap bahwa struktur dominan hubungan adalah kontras Blond–Blue versus Black–Brown, dengan pola Dim 2 sebagai tambahan yang terutama menonjolkan Red serta Green/Hazel.
